@@ -3,6 +3,9 @@ package com.pm.authservice.service;
 import com.pm.authservice.dto.LoginRequestDto;
 import com.pm.authservice.dto.LoginResponseDto;
 import com.pm.authservice.model.User;
+import com.pm.authservice.util.JwtUtil;
+import io.jsonwebtoken.JwtException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestBody;
 
@@ -12,15 +15,32 @@ import java.util.Optional;
 public class AuthService {
 
 
-     private  UserService userService;
-     public AuthService(UserService userService) {
+     private final  UserService userService;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
+
+     public AuthService(UserService userService,  PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
         this.userService = userService;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtUtil = jwtUtil;
      }
 
-      public Optional<LoginResponseDto> authenticate(LoginRequestDto loginRequestDto) {
+      public Optional<String> authenticate(LoginRequestDto loginRequestDto) {
 
-          Optional<User>  user = userService.findByEmail(loginRequestDto.getEmail());
+          Optional<String>  userToken = userService.findByEmail(loginRequestDto.getEmail())
+                  .filter(u-> passwordEncoder.matches(loginRequestDto.getPassword(),u.getPassword()))
+                  .map(u -> jwtUtil.generateToken(u.getEmail(), u.getRole()));
+
+           return userToken;
+      }
 
 
+      public boolean validateToken(String token) {
+          try{
+              jwtUtil.validateToken(token);
+              return true;
+          }catch (JwtException e) {
+              return false;
+          }
       }
 }

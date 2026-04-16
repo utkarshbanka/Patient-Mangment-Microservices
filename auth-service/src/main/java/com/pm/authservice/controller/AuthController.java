@@ -1,30 +1,46 @@
 package com.pm.authservice.controller;
 
+
 import com.pm.authservice.dto.LoginRequestDto;
 import com.pm.authservice.dto.LoginResponseDto;
+import com.pm.authservice.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
 
 @RestController
+@RequiredArgsConstructor
 public class AuthController {
 
+    private final AuthService authService;
 
     @Operation(summary = "This is The Login Endpoint")
     @PostMapping("/login")
      public ResponseEntity<LoginResponseDto> login(@RequestBody LoginRequestDto loginRequestDto) {
 
-        Optional<String> tokenOptional = authservice.authenticate(loginRequestDto);
+        Optional<String> tokenOptional = authService.authenticate(loginRequestDto);
         if (tokenOptional.isEmpty()) {
-            return new ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            return  ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         String token = tokenOptional.get();
-        return new ResponseEntity.ok(new LoginResponseDto(token));
+        return ResponseEntity.ok(new LoginResponseDto(token));
+     }
+    @Operation(summary = "This is Authorization Validation")
+    @GetMapping("/validate")
+     public ResponseEntity<Void>  validateToken(@RequestHeader("Authorization") String authHeader) {
+
+
+        //Auhtorization  Berear <<token>>
+
+         if (authHeader==null || !authHeader.startsWith("Bearer ")) {
+             return  ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+         }
+          return authService.validateToken(authHeader.substring( 7))
+                  ? ResponseEntity.ok().build(): ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
      }
 
 }
